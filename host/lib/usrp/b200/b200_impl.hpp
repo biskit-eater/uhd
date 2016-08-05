@@ -47,6 +47,8 @@
 #include <boost/assign.hpp>
 #include <boost/weak_ptr.hpp>
 #include "recv_packet_demuxer_3000.hpp"
+#include <uhd/types/time_spec.hpp>
+
 static const boost::uint8_t  B200_FW_COMPAT_NUM_MAJOR = 8;
 static const boost::uint8_t  B200_FW_COMPAT_NUM_MINOR = 0;
 static const boost::uint16_t B200_FPGA_COMPAT_NUM = 14;
@@ -162,6 +164,8 @@ private:
     boost::optional<uhd::msg_task::msg_type_t> handle_async_task(uhd::transport::zero_copy_if::sptr, boost::shared_ptr<AsyncTaskData>);
 
     void register_loopback_self_test(uhd::wb_iface::sptr iface);
+    uhd::time_spec_t get_last_gpio_time(uhd::wb_iface::sptr iface);
+    boost::uint64_t get_gpio_latch_count(uhd::wb_iface::sptr iface);
     void set_mb_eeprom(const uhd::usrp::mboard_eeprom_t &);
     void check_fw_compat(void);
     void check_fpga_compat(void);

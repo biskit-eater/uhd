@@ -53,6 +53,8 @@ localparam RB64_TIME_NOW        = 8;
 localparam RB64_TIME_PPS        = 16;
 localparam RB64_CODEC_READBACK  = 24;
 localparam RB32_FP_GPIO         = 32;
+localparam RB64_GPIO_TIME       = 48;
+localparam RB64_RB_DATA_USER    = 56;
 
 //pll constants
 static const int AD9361_SLAVENO = (1 << 0);

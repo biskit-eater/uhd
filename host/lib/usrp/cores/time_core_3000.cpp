@@ -60,6 +60,11 @@ struct time_core_3000_impl : time_core_3000
         _tick_rate = rate;
     }
 
+    double get_tick_rate(void)
+    {
+        return _tick_rate;
+    }
+
     void self_test(void)
     {
         const size_t sleep_millis = 100;

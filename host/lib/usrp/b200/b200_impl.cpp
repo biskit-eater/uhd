@@ -637,6 +637,13 @@ b200_impl::b200_impl(const uhd::device_addr_t& device_addr, usb_device_handle::s
         .add_coerced_subscriber(boost::bind(&b200_impl::sync_times, this));
     _tree->create<time_spec_t>(mb_path / "time" / "pps")
         .set_publisher(boost::bind(&time_core_3000::get_time_last_pps, _radio_perifs[0].time64));
+
+    //include a way to read the GPIO latched time register
+    _tree->create<time_spec_t>(mb_path / "time" / "gpio_latch_time")
+        .set_publisher(boost::bind(&b200_impl::get_last_gpio_time, this,_radio_perifs[0].ctrl));
+    _tree->create<boost::uint64_t>(mb_path / "time" / "gpio_latch_count")
+        .set_publisher(boost::bind(&b200_impl::get_gpio_latch_count, this,_radio_perifs[0].ctrl));
+
     BOOST_FOREACH(radio_perifs_t &perif, _radio_perifs)
     {
         _tree->access<time_spec_t>(mb_path / "time" / "pps")
@@ -881,6 +888,43 @@ void b200_impl::register_loopback_self_test(wb_iface::sptr iface)
     }
     UHD_MSG(status) << ((test_fail)? "fail" : "pass") << std::endl;
 }
+
+time_spec_t b200_impl::get_last_gpio_time(wb_iface::sptr iface)
+{
+    //On the rising edge of GPIO pin X, the FPGA will latch the vita time on the FPGA
+    //This is a convenience method for reading it out as a time_spec
+    //Use the tick rate in the time64 peripheral to convert to time
+    //(it is kept up to date on master clock changes, assume the value was latched with the current master clock rate)
+    boost::uint64_t vita_time_ticks = iface->peek64(RB64_GPIO_TIME);
+    time_spec_t output_time = time_spec_t::from_ticks(vita_time_ticks, _radio_perifs[0].time64->get_tick_rate());
+
+    /*debug..... //////////////////////////////////////////////////////////
+    UHD_MSG(status) << "DEBUG: got 0x" << std::hex << vita_time_ticks << std::dec << ", 0d" << vita_time_ticks
+                    << " from RB64_GPIO_TIME reg: " << RB64_GPIO_TIME << std::endl;
+
+    UHD_MSG(status) << "Converted time value to real seconds value: " << output_time.get_real_secs() << " from RB64_GPIO_TIME reg: " << RB64_GPIO_TIME << std::endl;
+    UHD_MSG(status) << "         Used tick rate: " << _radio_perifs[0].time64->get_tick_rate() << std::endl;
+
+    boost::uint64_t user_rb_data = iface->peek64(RB64_RB_DATA_USER);
+    UHD_MSG(status) << "DEBUG: got 0x" << std::hex << user_rb_data << std::dec << ", 0d" << user_rb_data
+                    << " from RB64_RB_DATA_USER reg: " << RB64_RB_DATA_USER << std::endl;
+
+    boost::uint64_t fp_gpio_data = iface->peek64(RB32_FP_GPIO);
+    std::bitset<16> bit_values(fp_gpio_data);
+    UHD_MSG(status) << "DEBUG: got " << bit_values << " from RB64_RB_DATA_USER reg: " << std::dec << RB32_FP_GPIO << std::endl;
+                 //////////////////////////////////////////////////////////
+    */
+    return output_time;
+}
+
+boost::uint64_t b200_impl::get_gpio_latch_count(wb_iface::sptr iface)
+{
+    //On the rising edge of GPIO pin X, the FPGA will latch the vita time on the FPGA
+    //This returns the number of times that has happened since the last radio reset
+    boost::uint64_t latch_count = iface->peek64(RB64_RB_DATA_USER);
+    return latch_count;
+}
+
 
 /***********************************************************************
  * Sample and tick rate comprehension below

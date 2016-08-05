@@ -85,6 +85,7 @@
 #include <csignal>
 #include <iostream>
 #include <stdlib.h>
+#include <uhd/property_tree.hpp>
 
 static const std::string        GPIO_DEFAULT_CPU_FORMAT = "fc32";
 static const std::string        GPIO_DEFAULT_OTW_FORMAT = "sc16";
@@ -183,6 +184,22 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
     std::cout << boost::format("Creating the usrp device with: %s...") % args << std::endl;
     uhd::usrp::multi_usrp::sptr usrp = uhd::usrp::multi_usrp::make(args);
     std::cout << boost::format("Using Device: %s") % usrp->get_pp_string() << std::endl;
+
+    //Need this in order to read out properties
+    uhd::property_tree::sptr tree = usrp->get_device()->get_tree();
+
+    //Test Property Reading by trying the time property... this is the same as if you did usrp->get_time_now()
+    //but a lower level call
+    std::string prop_name = std::string("mboards/0/time/now");
+    //std::cout << tree->exists("mboards/0/time/now") << std::endl; //optionally check if property exists first
+    std::cout << "Read Property: " << prop_name << " with value: " << tree->access<uhd::time_spec_t>(prop_name).get().get_real_secs() << std::endl;
+
+    //Test reading out our new custom properties
+    prop_name = "mboards/0/time/gpio_latch_time";
+    std::cout << "Read Property: " << prop_name << " with value: " << tree->access<uhd::time_spec_t>(prop_name).get().get_real_secs() << std::endl;
+    prop_name = "mboards/0/time/gpio_latch_count";
+    std::cout << "Read Property: " << prop_name << " with value: " << tree->access<boost::uint64_t>(prop_name).get() << std::endl;
+
 
     //print out initial unconfigured state of FP GPIO
     std::cout << "Initial GPIO values:" << std::endl;
@@ -313,7 +330,18 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             {
                 rb = usrp->get_gpio_attr(gpio, "READBACK");
                 std::cout << "\rREADBACK: " << to_bit_string(rb, num_bits);
-                boost::this_thread::sleep(boost::posix_time::milliseconds(10));
+
+            //Read out all relevant registers each time the bitbang loop repeats
+            prop_name = "mboards/0/time/now";
+            std::cout << "Read Property: " << prop_name << " with value: "
+                      << tree->access<uhd::time_spec_t>(prop_name).get().get_real_secs() << std::endl;
+            prop_name = "mboards/0/time/gpio_latch_time";
+            std::cout << "Read Property: " << prop_name << " with value: "
+                      << tree->access<uhd::time_spec_t>(prop_name).get().get_real_secs() << std::endl;
+            prop_name = "mboards/0/time/gpio_latch_count";
+            std::cout << "Read Property: " << prop_name << " with value: "
+                      << tree->access<boost::uint64_t>(prop_name).get() << std::endl;
+                boost::this_thread::sleep(boost::posix_time::milliseconds(500));
             }
             std::cout << std::endl;
         }
@@ -340,6 +368,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             } else {
                 std::cout << "pass:" << std::endl;
             }
+
             output_reg_values(gpio, usrp, num_bits);
             usrp->set_gpio_attr(gpio, "OUT", 0, GPIO_BIT(4));
             if (stop_signal_called)
@@ -366,6 +395,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             } else {
                 std::cout << "pass:" << std::endl;
             }
+
             output_reg_values(gpio, usrp, num_bits);
             rx_stream->issue_stream_cmd(uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS);
             //clear out any data left in the rx stream
@@ -397,6 +427,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             } else {
                 std::cout << "pass:" << std::endl;
             }
+
             output_reg_values(gpio, usrp, num_bits);
             tx_md.end_of_burst = true;
             try {
@@ -430,6 +461,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[])
             } else {
                 std::cout << "pass:" << std::endl;
             }
+
             output_reg_values(gpio, usrp, num_bits);
             rx_stream->issue_stream_cmd(uhd::stream_cmd_t::STREAM_MODE_STOP_CONTINUOUS);
             tx_md.end_of_burst = true;

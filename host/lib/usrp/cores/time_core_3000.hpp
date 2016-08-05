@@ -47,6 +47,8 @@ public:
 
     virtual void set_tick_rate(const double rate) = 0;
 
+    virtual double get_tick_rate(void) = 0;
+
     virtual uhd::time_spec_t get_time_now(void) = 0;
 
     virtual uhd::time_spec_t get_time_last_pps(void) = 0;
