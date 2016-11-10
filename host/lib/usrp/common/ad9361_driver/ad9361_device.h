@@ -266,6 +266,8 @@ private:    //Members
     boost::recursive_mutex  _mutex;
     bool _use_dc_offset_tracking;
     bool _use_iq_balance_tracking;
+    bool _caled_once_rx;
+    bool _caled_once_tx;
 };
 
 }}  //namespace

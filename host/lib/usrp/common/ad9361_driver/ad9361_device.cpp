@@ -1549,6 +1549,8 @@ void ad9361_device_t::initialize()
     _tx2_gain = 0;
     _use_dc_offset_tracking = true;
     _use_iq_balance_tracking = true;
+    _caled_once_rx = false;
+    _caled_once_tx = false;
     _rx1_agc_mode = GAIN_MODE_SLOW_AGC;
     _rx2_agc_mode = GAIN_MODE_SLOW_AGC;
     _rx1_agc_enable = false;
@@ -2035,22 +2037,22 @@ double ad9361_device_t::tune(direction_t direction, const double value)
      */
     if (std::abs(last_cal_freq - tune_freq) > AD9361_CAL_VALID_WINDOW) {
         /* Run the calibration algorithms. */
-        if (direction == RX) {
+        if ((direction == RX) && (!_caled_once_rx)) {
+            _caled_once_rx = true;
             _calibrate_rf_dc_offset();
             if (!_use_iq_balance_tracking)
                 _calibrate_rx_quadrature();
             if (_use_dc_offset_tracking)
                 _configure_bb_dc_tracking();
+            if (_use_iq_balance_tracking)
+                _configure_rx_iq_tracking();
 
             _last_rx_cal_freq = tune_freq;
-        } else {
+        } else if ((direction == TX) && (!_caled_once_tx)) {
+            _caled_once_tx = true;
             _calibrate_tx_quadrature();
             _last_tx_cal_freq = tune_freq;
         }
-
-        /* Rx IQ tracking can be disabled on Rx or Tx re-calibration */
-        if (_use_iq_balance_tracking)
-            _configure_rx_iq_tracking();
     }
 
     /* If we were in the FDD state, return it now. */
